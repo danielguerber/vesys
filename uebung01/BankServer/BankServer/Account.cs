@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Globalization;
 
 namespace BankServer
 {
     public class Account
     {
+
+        private static int _sequence;
 
         private readonly string _owner;
 
@@ -23,25 +22,21 @@ namespace BankServer
             get { return _number;  }
         }
 
-        private double _balance = 0;
-
-        public double Balance 
-        { 
-            get { return _balance;  }
-        }
-
+        public double Balance { get; private set; }
 
         public bool IsActive { get; set; }
 
 		public Account(String owner) {
-			this._owner = owner;
-			this._number = Guid.NewGuid().ToString();
+		    Balance = 0;
+		    _owner = owner;
+		    _number = _sequence++.ToString(CultureInfo.InvariantCulture);
 		    IsActive = true;
 		}
 
 
 		public void Deposit(double amount) {
-			if (!this.IsActive) {
+            if (!IsActive)
+            {
 				throw new InactiveException();
 			}
 			
@@ -49,11 +44,11 @@ namespace BankServer
 				throw new ArgumentException();
 			}
 			
-			this._balance += amount;
+			Balance += amount;
 		}
 
 		public void Withdraw(double amount) {
-			if (!this.IsActive) {
+			if (!IsActive) {
 				throw new InactiveException();
 			}
 			
@@ -61,11 +56,11 @@ namespace BankServer
 				throw new ArgumentException("");
 			}
 			
-			if (amount > _balance) {
+			if (amount > Balance) {
 				throw new OverdrawException();
 			}
 			
-			this._balance -= amount;
+			Balance -= amount;
 		}
 
 	}

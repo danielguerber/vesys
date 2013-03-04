@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace BankServer
 {
@@ -14,159 +13,233 @@ namespace BankServer
     {
         private readonly TcpClient _client;
         private readonly Bank _bank;
+        private readonly StreamReader _reader;
+        private readonly StreamWriter _writer;
 
         public BankServer(TcpClient client, Bank bank)
         {
             _client = client;
             _bank = bank;
+            _reader = new StreamReader(_client.GetStream(), Encoding.Unicode);
+            _writer = new StreamWriter(_client.GetStream(), Encoding.Unicode);
         }
+
+        private static String Escape(String s)
+        {
+            return s.Replace("\n", "").Replace(":", "[colon]");
+        }
+
+        private static String Unescape(String s)
+        {
+            return s.Replace("\n", "").Replace("[colon]", ":");
+        }
+
+        public void SendMessage(String command, params string[] args) {
+			var sb = new StringBuilder(Escape(command));
+			for (var i = 0; i < args.Count(); i++) {
+				sb.Append(":");
+				sb.Append(Escape(args[i]));
+			}
+			_writer.WriteLine(sb.ToString());
+			_writer.Flush();
+		}
 
         public void Read()
         {
-            var reader = new StreamReader(_client.GetStream(), Encoding.Unicode);
-            var writer = new StreamWriter(_client.GetStream(), Encoding.Unicode);
-            var input = reader.ReadLine();
-            while (!String.IsNullOrEmpty(input))
+            
+            String input;
+            while ((input = _reader.ReadLine()) != null)
             {
-                string number;
                 Account account;
-                switch (input)
+                var message = input.Split(':').Select(Unescape).ToArray();
+                
+                switch (message[0])
                 {
                     case "get-acc-numbers":
                         var accNumbers = _bank.GetAccountNumbers().ToArray();
-                        writer.WriteLine(accNumbers.Length);
-                        foreach (var accNumber in accNumbers)
-                        {
-                            writer.WriteLine(accNumber);
-                        }
+                        SendMessage(accNumbers.Length.ToString(CultureInfo.InvariantCulture), accNumbers);
                         break;
                     case "create":
-                        var owner = reader.ReadLine();
-                        number = _bank.CreateAccount(owner);
-                        if (!String.IsNullOrEmpty(number))
+                        if (message.Length < 2)
                         {
-                            writer.WriteLine("ok");
-                            writer.WriteLine(number);
+                            SendMessage("error");
                         }
                         else
                         {
-                            writer.WriteLine("error");
+                            var number = _bank.CreateAccount(message[1]);
+                            if (!String.IsNullOrEmpty(number))
+                            {
+                                SendMessage("ok", number);
+                            }
+                            else
+                            {
+                                SendMessage("error");
+                            }
                         }
                         break;
                     case "close":
-                        number = reader.ReadLine();
-                        writer.WriteLine(_bank.CloseAccount(number) ? "ok" : "error");
-                        break;
-                    case "get-acc":
-                        number = reader.ReadLine();
-                        account = _bank.GetAccount(number);
-                        if (account != null)
+                        if (message.Length < 2)
                         {
-                            writer.WriteLine("ok");
-                            writer.WriteLine(account.Number);
+                            SendMessage("error");
                         }
                         else
                         {
-                            writer.WriteLine("error");
+                            SendMessage(_bank.CloseAccount(message[1]) ? "ok" : "error");
+                        }
+                        break;
+                    case "get-acc":
+                        if (message.Length < 2)
+                        {
+                            SendMessage("error");
+                        }
+                        else
+                        {
+                            account = _bank.GetAccount(message[1]);
+                            if (account != null)
+                            {
+                                SendMessage("ok", account.Number);
+                            }
+                            else
+                            {
+                                SendMessage("error");
+                            }
                         }
                         break;
                     case "transfer":
-                        var fromAccount = _bank.GetAccount(reader.ReadLine());
-                        var toAccount = _bank.GetAccount(reader.ReadLine());
-
-                        if (fromAccount == null && toAccount == null)
+                        if (message.Length < 4)
                         {
-                            writer.WriteLine("ArgumentException");
+                            SendMessage("error");
                         }
                         else
                         {
-                            try
+                            var fromAccount = _bank.GetAccount(message[1]);
+                            var toAccount = _bank.GetAccount(message[2]);
+
+                            if (fromAccount == null && toAccount == null)
                             {
-                                _bank.Transfer(fromAccount, toAccount, Double.Parse(reader.ReadLine()));
-                                writer.WriteLine("ok");
+                                SendMessage("ArgumentException");
                             }
-                            catch (Exception e)
+                            else
                             {
-                                writer.WriteLine(e.GetType().Name);
+                                try
+                                {
+                                    _bank.Transfer(fromAccount, toAccount, Double.Parse(message[3]));
+                                    SendMessage("ok");
+                                }
+                                catch (Exception e)
+                                {
+                                    SendMessage(e.GetType().Name);
+                                }
                             }
                         }
                         break;
                     case "get-balance":
-                        number = reader.ReadLine();
-                        account = _bank.GetAccount(number);
-                        writer.WriteLine(account != null ? account.Balance : Double.NaN);
-                        break;
-                    case "get-owner":
-                        number = reader.ReadLine();
-                        account = _bank.GetAccount(number);
-                        writer.WriteLine(account != null ? account.Owner : "");
-                        break;
-                    case "get-active":
-                        number = reader.ReadLine();
-                        account = _bank.GetAccount(number);
-                        writer.WriteLine(account != null && account.IsActive);
-                        break;
-                    case "deposit":
-                        number = reader.ReadLine();
-                        account = _bank.GetAccount(number);
-                        if (account != null)
+                        if (message.Length < 2)
                         {
-                            try
-                            {
-                                account.Deposit(Double.Parse(reader.ReadLine()));
-                                writer.WriteLine("ok");
-                            }
-                            catch (Exception e)
-                            {
-                                writer.WriteLine(e.GetType().Name);
-                            }
+                            SendMessage(Double.NaN.ToString(CultureInfo.InvariantCulture));
                         }
                         else
                         {
-                            writer.WriteLine("ArgumentException");
+                            account = _bank.GetAccount(message[1]);
+                            SendMessage((account != null ? account.Balance : Double.NaN)
+                                .ToString(CultureInfo.InvariantCulture));
+                        }
+                        break;
+                    case "get-owner":
+                        if (message.Length < 2)
+                        {
+                            SendMessage("");
+                        }
+                        else
+                        {
+                            account = _bank.GetAccount(message[1]);
+                            SendMessage(account != null ? account.Owner : "");
+                        }
+                        break;
+                    case "get-active":
+                        if (message.Length < 2)
+                        {
+                            SendMessage(false.ToString());
+                        }
+                        else
+                        {
+                            account = _bank.GetAccount(message[1]);
+                            SendMessage((account != null && account.IsActive).ToString());
+                        }
+                        break;
+                    case "deposit":
+                        if (message.Length < 3)
+                        {
+                            SendMessage("error");
+                        }
+                        else
+                        {
+                            account = _bank.GetAccount(message[1]);
+                            if (account != null)
+                            {
+                                try
+                                {
+                                    account.Deposit(Double.Parse(message[2]));
+                                    SendMessage("ok");
+                                }
+                                catch (Exception e)
+                                {
+                                    SendMessage(e.GetType().Name);
+                                }
+                            }
+                            else
+                            {
+                                SendMessage("ArgumentException");
+                            }
                         }
                         break;
                     case "withdraw":
-                        number = reader.ReadLine();
-                        account = _bank.GetAccount(number);
-                        if (account != null)
+                        if (message.Length < 3)
                         {
-                            try
-                            {
-                                account.Withdraw(Double.Parse(reader.ReadLine()));
-                                writer.WriteLine("ok");
-                            }
-                            catch (Exception e)
-                            {
-                                writer.WriteLine(e.GetType().Name);
-                            }
+                            SendMessage("error");
                         }
                         else
                         {
-                            writer.WriteLine("ArgumentException");
+                            account = _bank.GetAccount(message[1]);
+                            if (account != null)
+                            {
+                                try
+                                {
+                                    account.Withdraw(Double.Parse(message[2]));
+                                    SendMessage("ok");
+                                }
+                                catch (Exception e)
+                                {
+                                    SendMessage(e.GetType().Name);
+                                }
+                            }
+                            else
+                            {
+                                SendMessage("ArgumentException");
+                            }
                         }
                         break;
                     default:
-                        writer.WriteLine("error");
+                        SendMessage("error");
                         break;
                 }
-                writer.Flush();
-                input = reader.ReadLine();
             }
         }
 
-        static void Main(string[] args)
+// ReSharper disable FunctionNeverReturns
+        static void Main()
         {
             var bank = new Bank();
             var listener = new TcpListener(IPAddress.Any, 5678);
             listener.Start();
+
             while (true)
             {
                 var client = listener.AcceptTcpClient();
                 var thread = new Thread(new BankServer(client, bank).Read);
                 thread.Start();
             }
-
         }
+// ReSharper restore FunctionNeverReturns
     }
 }

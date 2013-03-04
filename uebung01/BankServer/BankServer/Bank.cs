@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BankServer
 {
@@ -27,11 +25,8 @@ namespace BankServer
 		    {
 		        return false;
 		    }
-		    else
-		    {
-		        closeAccount.IsActive = false;
-		        return true;
-		    }
+		    closeAccount.IsActive = false;
+		    return true;
 		}
 
 

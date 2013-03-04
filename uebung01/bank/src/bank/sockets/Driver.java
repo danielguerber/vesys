@@ -12,6 +12,7 @@ import java.util.Set;
 
 import bank.InactiveException;
 import bank.OverdrawException;
+import bank.sockets.Driver.NetworkHandler;
 
 public class Driver implements bank.BankDriver {
 	private Socket s;
@@ -24,7 +25,8 @@ public class Driver implements bank.BankDriver {
 		s = new Socket(args[0], Integer.parseInt(args[1]), null, 0);
 		out = new PrintWriter(new OutputStreamWriter(s.getOutputStream(),Charset.forName("UTF-16")));
 		in = new BufferedReader(new InputStreamReader(s.getInputStream(),Charset.forName("UTF-16")));
-		bank = new Bank(out, in);
+		NetworkHandler handler = new NetworkHandler(out, in);
+		bank = new Bank(handler);
 	}
 
 	@Override
@@ -42,36 +44,74 @@ public class Driver implements bank.BankDriver {
 	public Bank getBank() {
 		return bank;
 	}
-
-	static class Bank implements bank.Bank {
+	
+	static class NetworkHandler {
 		private PrintWriter out;
 		private BufferedReader in;
 		
-		public Bank(PrintWriter out, BufferedReader in) {
+		public NetworkHandler(PrintWriter out, BufferedReader in) {
 			this.out = out;
 			this.in = in;
+		}
+		
+		public String[] sendMessage(String command, String... args) throws IOException {
+			StringBuilder sb = new StringBuilder(escape(command));
+			for (int i = 0; i < args.length; i++) {
+				sb.append(":");
+				sb.append(escape(args[i]));
+			}
+			out.println(sb.toString());
+			out.flush();
+			
+			String[] message = in.readLine().split(":");
+			for (int i = 0; i < message.length; i++) {
+				message[i] = unescape(message[i]);
+			}
+			
+			if (message.length == 0 || message[0] == null) {
+				throw new IOException("Illegal message recieved!");
+			}
+			
+			return message;
+		}
+		
+		private static String escape(String s) {
+			return s.replace("\n","").replace(":", "[colon]");
+		}
+		
+		private static String unescape(String s) {
+			return s.replace("\n","").replace("[colon]", ":");
+		}
+	}
+
+	static class Bank implements bank.Bank {
+		private NetworkHandler handler;
+
+		public Bank(NetworkHandler handler) {
+			this.handler = handler;
 		}
 
 		@Override
 		public Set<String> getAccountNumbers() throws IOException {
-			out.println("get-acc-numbers");
-			out.flush();
+			String[] message = handler.sendMessage("get-acc-numbers");
+			
 			Set<String> accountNumbers = new HashSet<String>();
-			String number = in.readLine();
-			int count = Integer.parseInt(number);
-			for (int i = 0; i < count; i++) {
-				accountNumbers.add(in.readLine());
+			int count = Integer.parseInt(message[0]);
+			if (message.length < count + 1) {
+				throw new IOException("Invalid message!");
+			}
+			
+			for (int i = 1; i <= count; i++) {
+				accountNumbers.add(message[i]);
 			}
 			return accountNumbers;
 		}
 
 		@Override
 		public String createAccount(String owner) throws IOException {
-			out.println("create");
-			out.println(owner);
-			out.flush();
-			if (in.readLine().equals("ok")) {
-				return in.readLine();
+			String[] message = handler.sendMessage("create", owner);
+			if (message[0].equals("ok") && message.length > 1) {
+				return message[1];
 			} else {
 				return null;
 			}
@@ -79,10 +119,8 @@ public class Driver implements bank.BankDriver {
 
 		@Override
 		public boolean closeAccount(String number) throws IOException {
-			out.println("close");
-			out.println(number);
-			out.flush();
-			if (in.readLine().equals("ok")) {
+			String[] message = handler.sendMessage("close", number);
+			if (message[0].equals("ok")) {
 				return true;
 			} else {
 				return false;
@@ -92,11 +130,9 @@ public class Driver implements bank.BankDriver {
 		
 		@Override
 		public bank.Account getAccount(String number) throws IOException {
-			out.println("get-acc");
-			out.println(number);
-			out.flush();
-			if (in.readLine().equals("ok")) {
-				return new Account(in.readLine(), out, in);
+			String[] message = handler.sendMessage("get-acc", number);
+			if (message[0].equals("ok") && message.length > 1) {
+				return new Account(message[1], handler);
 			} else {
 				return null;
 			}
@@ -119,13 +155,9 @@ public class Driver implements bank.BankDriver {
 		@Override
 		public void transfer(bank.Account from, bank.Account to, double amount)
 				throws IOException, InactiveException, OverdrawException {
-			out.println("transfer");
-			out.println(from.getNumber());
-			out.println(to.getNumber());
-			out.println(amount);
-			out.flush();
+			String[] message = handler.sendMessage("transfer", from.getNumber(), to.getNumber(), String.valueOf(amount));
 			
-			String status = in.readLine();
+			String status = message[0];
 			if (!status.equals("ok")) {
 				switch (status) {
 					case "InactiveException":
@@ -144,29 +176,23 @@ public class Driver implements bank.BankDriver {
 
 	static class Account implements bank.Account {
 		private String number;
-		private PrintWriter out;
-		private BufferedReader in;
+		private NetworkHandler handler;
 		
-		Account(String number, PrintWriter out, BufferedReader in) {
+		Account(String number, NetworkHandler handler) {
 			this.number = number;
-			this.out = out;
-			this.in = in;
+			this.handler = handler;
 		}
 
 		@Override
 		public double getBalance() throws IOException {
-			out.println("get-balance");
-			out.println(number);
-			out.flush();
-			return Double.parseDouble(in.readLine());
+			String[] message = handler.sendMessage("get-balance", number);
+			return Double.parseDouble(message[0]);
 		}
 
 		@Override
 		public String getOwner() throws IOException {
-			out.println("get-owner");
-			out.println(number);
-			out.flush();
-			return in.readLine();
+			String[] message = handler.sendMessage("get-owner", number);
+			return message[0];
 		}
 
 		@Override
@@ -176,19 +202,14 @@ public class Driver implements bank.BankDriver {
 
 		@Override
 		public boolean isActive() throws IOException {
-			out.println("get-active");
-			out.println(number);
-			out.flush();
-			return in.readLine().equals("active");
+			String[] message = handler.sendMessage("get-active", number);
+			return message[0].equals("active");
 		}
 
 		@Override
 		public void deposit(double amount) throws InactiveException, IllegalArgumentException, IOException {
-			out.println("deposit");
-			out.println(number);
-			out.println(amount);
-			out.flush();
-			String status = in.readLine();
+			String[] message = handler.sendMessage("deposit", number, String.valueOf(amount));
+			String status = message[0];
 			if (!status.equals("ok")) {
 				switch (status) {
 					case "InactiveException":
@@ -203,11 +224,8 @@ public class Driver implements bank.BankDriver {
 
 		@Override
 		public void withdraw(double amount) throws InactiveException, OverdrawException, IllegalArgumentException, IOException {
-			out.println("withdraw");
-			out.println(number);
-			out.println(amount);
-			out.flush();
-			String status = in.readLine();
+			String[] message = handler.sendMessage("withdraw", number, String.valueOf(amount));
+			String status = message[0];
 			if (!status.equals("ok")) {
 				switch (status) {
 					case "InactiveException":

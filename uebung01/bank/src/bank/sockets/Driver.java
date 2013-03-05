@@ -138,20 +138,7 @@ public class Driver implements bank.BankDriver {
 			}
 			
 		}
-
-		/**
-		 * Transfers the given amount from account a to account b.
-		 * 
-		 * @param a account to withdraw amount from
-		 * @param b account to deposit amount
-		 * @param amount value to transfer
-		 * @pre amount >= 0
-		 * @throws InactiveException if one of the two accounts is not active
-		 * @throws OverdrawException if the amount is greater than the balance of
-		 *             account a
-		 * @throws IllegalArgumentException if the argument is negative
-		 * @throws IOException if a remoting or communication problem occurs
-		 */
+		
 		@Override
 		public void transfer(bank.Account from, bank.Account to, double amount)
 				throws IOException, InactiveException, OverdrawException {

@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+
+<project name="BankServlet" default="compile" basedir=".">
+
+	<property name="src.dir" value="${basedir}/src"/>
+	<property name="res.dir" value="${basedir}/res"/>
+	<property name="lib.dir" value="${basedir}/lib"/>
+	<property name="classes.dir" value="${basedir}/bin"/>
+
+<!--
+	<property environment="env"/>
+	<property name="tomcat.home" value="${env.CATALINA_HOME}"/>
+-->
+	<property name="tomcat.home" value="C:\xampp\tomcat"/>
+		
+	<!-- Build classpath -->
+	<path id="classpath">
+		<pathelement location="${classes.dir}"/>
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar"/>
+		</fileset>
+	</path>
+
+	<target name="prepare" >
+		<mkdir dir="${classes.dir}"/>
+	</target>
+
+	<target name="clean">
+		<delete dir="${classes.dir}"/>
+	</target>
+
+	<target name="compile" depends="prepare">
+		<javac srcdir="${src.dir}"
+					 destdir="${classes.dir}"
+					 debug="on"
+					 includeantruntime="false"
+					 deprecation="on"
+					 optimize="off">
+			<classpath refid="classpath"/>
+			<include name="**/**.java" />
+		</javac>
+	</target>
+
+	<target name="bankservlet.war" depends="compile">
+		<war warfile="${basedir}/bankservlet.war" needxmlfile="false">
+			<classes dir="${classes.dir}" >
+				<include name="**/**.class" />
+			</classes>
+		</war>
+	</target>
+
+	<target name="bankservlet.deploy" depends="bankservlet.war">
+		<copy file="${basedir}/bankservlet.war" todir="${tomcat.home}/webapps"/>
+	</target>
+
+	<target name="bankservlet.undeploy">
+		<delete file="${tomcat.home}/webapps/bankservlet.war"/>
+	</target>
+
+
+
+
+</project>
+

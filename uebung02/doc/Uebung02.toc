@@ -1,0 +1,6 @@
+\select@language {ngerman}
+\contentsline {section}{\numberline {1}Beschreibung}{1}
+\contentsline {subsection}{\numberline {1.1}Architektur}{1}
+\contentsline {section}{\numberline {2}Code}{1}
+\contentsline {subsection}{\numberline {2.1}Servlets}{1}
+\contentsline {subsection}{\numberline {2.2}Bank}{8}

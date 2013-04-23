@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 import bank.implementation.Bank;
 
 @WebServlet("/close")
-public class CloseServlet extends HttpServlet{
+public final class CloseServlet extends HttpServlet {
 	
 	/**
 	 * Generated UID
@@ -21,25 +21,31 @@ public class CloseServlet extends HttpServlet{
 
 	
 	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+	protected void doGet(final HttpServletRequest req, 
+						 final HttpServletResponse resp)
 			throws ServletException, IOException {
 		
 		String number = req.getParameter("number");
-		if (number==null) number="";
+		if (number == null) {
+			number = "";
+		}
 		
 		PrintWriter writer = resp.getWriter();
 		resp.setContentType("text/html");	
 		
-		writer.write("<html><head><title>Bank</title></head><body><h1>Close Account</h1>");
+		writer.write("<html><head><title>Bank</title></head>");
+		writer.write("<body><h1>Close Account</h1>");
 		writer.write("<form action=\"close\" method=\"post\">");
-		writer.write("Number:<br/> <input type=\"text\" name=\"number\" value=\"" + number + "\"readonly></input><br/>");
+		writer.write("Number:<br/> <input type=\"text\" name=\"number\""); 
+		writer.write("value=\"" + number + "\"readonly></input><br/>");
 		writer.write("Close this Account?<br/>");
 		writer.write("<input type=\"submit\" name=\"submit\" value=\"OK\"/>");
 		writer.write("</form></body></html>");
 	}
 	
 	@Override
-	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+	protected void doPost(final HttpServletRequest req, 
+						  final HttpServletResponse resp)
 			throws ServletException, IOException {
 		String error = null;
 		String number = req.getParameter("number");
@@ -49,13 +55,12 @@ public class CloseServlet extends HttpServlet{
 	    } else {
 	    	try {
 	    		Bank bank = Bank.getInstance();
-				if(bank.closeAccount(number)) {
+				if (bank.closeAccount(number)) {
 					resp.sendRedirect("");
 				} else {
 					error = "Could not close Account!";
 				}
-	    	}
-			catch (Exception e) {
+	    	} catch (Exception e) {
 				error = e.getMessage();
 			}
 	    }
@@ -64,12 +69,13 @@ public class CloseServlet extends HttpServlet{
 		PrintWriter writer = resp.getWriter();
 		resp.setContentType("text/html");	
 		
-		writer.write("<html><head><title>Bank</title></head><body><h1>Error</h1>");
+		writer.write("<html><head><title>Bank</title>");
+		writer.write("</head><body><h1>Error</h1>");
 		if (error != null) {
 			writer.write(error + "<br/>");
 		}
-		writer.write("<a href=\"withdraw?number=");
-		if (number!=null) {
+		writer.write("<a href=\"close?number=");
+		if (number != null) {
 			writer.write(number);
 		}
 		writer.write("\">Back</a>&nbsp;");

@@ -4,11 +4,11 @@
 	<property file="build.properties" />
 	
 	<path id="bank.class.path">
-<!--
+
 		<fileset dir="${lib.dir}">
 			<include name="*.jar" />
 		</fileset>
--->
+
 		<dirset dir="${bin.dir}"/>
 	</path>
 
@@ -51,5 +51,14 @@
 			<classpath refid="bank.class.path"/>
 		</java>
 	</target>
+	
+	<target name="run.rest" depends="compile" description="launches rest bank">
+		<java classname="bank.Client" fork="yes" dir=".">
+			<arg value="bank.rest.Driver"/>
+			<arg value="http://localhost:8080/restserver/"/>
+			<classpath refid="bank.class.path"/>
+		</java>
+	</target>
+	
 	
 </project>

@@ -17,19 +17,25 @@ package bank;
  * @version 3.0
  */
 public class OverdrawException extends Exception {
+	
+	/**
+	 * Generated UID
+	 */
+	private static final long serialVersionUID = -3319092695992936158L;
+
 	public OverdrawException() {
 		super();
 	}
 
-	public OverdrawException(String reason) {
+	public OverdrawException(final String reason) {
 		super(reason);
 	}
 
-	public OverdrawException(String reason, Throwable cause) {
+	public OverdrawException(final String reason, final Throwable cause) {
 		super(reason, cause);
 	}
 
-	public OverdrawException(Throwable cause) {
+	public OverdrawException(final Throwable cause) {
 		super(cause);
 	}
 }

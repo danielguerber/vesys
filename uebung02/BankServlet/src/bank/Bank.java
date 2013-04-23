@@ -62,12 +62,13 @@ public interface Bank {
 
 	/**
 	 * Returns a particular account given the account number. If the account
-	 * number is not valid, <code>null</code> is returned as result. The returned
-	 * account may be passive.
+	 * number is not valid, <code>null</code> is returned as result. The
+	 * returned account may be passive.
 	 * 
 	 * @param number number of the account
-	 * @return account with the account number as specified or <code>null</code>,
-	 *         if such an account was never created and does not exist.
+	 * @return account with the account number as specified or 
+	 *         <code>null</code>, if such an account was never created and 
+	 *         does not exist.
 	 * @throws IOException if a remoting or communication problem occurs
 	 */
 	Account getAccount(String number) throws IOException;
@@ -86,6 +87,6 @@ public interface Bank {
 	 * @throws IOException if a remoting or communication problem occurs
 	 */
 	void transfer(Account a, Account b, double amount)
-			throws IOException, IllegalArgumentException, OverdrawException,
+			throws IOException, OverdrawException,
 			InactiveException;
 }

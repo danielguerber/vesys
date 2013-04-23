@@ -5,13 +5,13 @@ import java.util.UUID;
 import bank.InactiveException;
 import bank.OverdrawException;
 
-public class Account implements bank.Account {
+public final class Account implements bank.Account {
 	private String number;
 	private String owner;
 	private double balance;
 	private boolean active = true;
 
-	Account(String owner) {
+	Account(final String owner) {
 		this.owner = owner;
 		this.number = UUID.randomUUID().toString();
 	}
@@ -36,13 +36,14 @@ public class Account implements bank.Account {
 		return active;
 	}
 	
-	void setActive(boolean active) {
+	void setActive(final boolean active) {
 		this.active = active;
 	}
 
 
 	@Override
-	public void deposit(double amount) throws InactiveException, IllegalArgumentException {
+	public void deposit(final double amount) 
+			throws InactiveException {
 		if (!this.isActive()) {
 			throw new InactiveException("Account is closed!");
 		}
@@ -55,7 +56,8 @@ public class Account implements bank.Account {
 	}
 
 	@Override
-	public void withdraw(double amount) throws InactiveException, OverdrawException, IllegalArgumentException {
+	public void withdraw(final double amount) 
+			throws InactiveException, OverdrawException {
 		if (!this.isActive()) {
 			throw new InactiveException("Account is closed!");
 		}

@@ -9,11 +9,11 @@ import java.util.Set;
 import bank.InactiveException;
 import bank.OverdrawException;
 
-public class Bank implements bank.Bank {
+public final class Bank implements bank.Bank {
 	private static Bank instance;
 	
 	public static Bank getInstance() {
-		if (instance==null) {
+		if (instance == null) {
 			instance = new Bank();
 		}
 		return instance;
@@ -33,14 +33,14 @@ public class Bank implements bank.Bank {
 	}
 
 	@Override
-	public String createAccount(String owner) {
+	public String createAccount(final String owner) {
 		Account newAccount = new Account(owner);
 		accounts.put(newAccount.getNumber(), newAccount);
 		return newAccount.getNumber();
 	}
 
 	@Override
-	public boolean closeAccount(String number) {
+	public boolean closeAccount(final String number) {
 		Account closeAccount = accounts.get(number);
 		if (closeAccount != null 
 				&& closeAccount.getBalance() == 0
@@ -54,7 +54,7 @@ public class Bank implements bank.Bank {
 
 	
 	@Override
-	public bank.Account getAccount(String number) {
+	public bank.Account getAccount(final String number) {
 		return (bank.Account) accounts.get(number);
 	}
 
@@ -72,7 +72,9 @@ public class Bank implements bank.Bank {
 	 * @throws IOException if a remoting or communication problem occurs
 	 */
 	@Override
-	public void transfer(bank.Account from, bank.Account to, double amount)
+	public void transfer(final bank.Account from, 
+						 final bank.Account to, 
+						 final double amount)
 			throws IOException, InactiveException, OverdrawException {
 		
 		if (!from.isActive()) {

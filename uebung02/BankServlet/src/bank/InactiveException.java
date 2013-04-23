@@ -15,19 +15,25 @@ package bank;
  * @version 3.0
  */
 public class InactiveException extends Exception {
+	
+	/**
+	 * Generated UID
+	 */
+	private static final long serialVersionUID = -408686052253480736L;
+
 	public InactiveException() {
 		super();
 	}
 
-	public InactiveException(String reason) {
+	public InactiveException(final String reason) {
 		super(reason);
 	}
 
-	public InactiveException(String reason, Throwable cause) {
+	public InactiveException(final String reason, final Throwable cause) {
 		super(reason, cause);
 	}
 
-	public InactiveException(Throwable cause) {
+	public InactiveException(final Throwable cause) {
 		super(cause);
 	}
 }

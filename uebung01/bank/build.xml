@@ -60,5 +60,19 @@
 		</java>
 	</target>
 	
+	<target name="run.rmi" depends="compile" description="launches rest bank">
+			<java classname="bank.Client" fork="yes" dir=".">
+				<arg value="bank.rmi.Driver"/>
+				<classpath refid="bank.class.path"/>
+			</java>
+		</target>
+	
+	<target name="run.rmi.server" depends="compile" description="launches rest bank">
+			<java classname="bank.rmi.Server" fork="yes" dir="." >
+				<jvmarg value="-Djava.rmi.server.codebase=file:C:/Schule/github/vesys/uebung01/bank/bin/"/>
+				<classpath refid="bank.class.path"/>
+			</java>
+		</target>
+	
 	
 </project>

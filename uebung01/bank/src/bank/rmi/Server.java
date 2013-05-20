@@ -1,6 +1,10 @@
-package bank.local;
+package bank.rmi;
 
 import java.io.IOException;
+import java.rmi.Naming;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -9,44 +13,39 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import bank.BankDriver2.UpdateHandler;
 import bank.InactiveException;
 import bank.OverdrawException;
 
-public class Driver implements bank.BankDriver2 {
-	private Bank bank = null;
-	private List<UpdateHandler> updateHandlers = new ArrayList<UpdateHandler>();
-
-	@Override
-	public void connect(String[] args) {
-		bank = new Bank(updateHandlers);
-		System.out.println("connected...");
-	}
-
-	@Override
-	public void disconnect() {
-		bank = null;
-		System.out.println("disconnected...");
-	}
-
-	@Override
-	public Bank getBank() {
-		return bank;
+public class Server {
+	
+	public static void main(String args[]) throws Exception {
+		try {
+			LocateRegistry.createRegistry(1099);
+		}
+		catch (RemoteException e) {
+			System.out.println(">> registry could not be exported");
+			System.out.println(">> probably another registry already runs on 1099");
+		}
+		
+		RemoteBank bank = new Bank();
+		Naming.rebind("bankService", bank);
 	}
 	
-	@Override
-	public void registerUpdateHandler(UpdateHandler handler) throws IOException {
-		updateHandlers.add(handler);
-	}
-
-	static class Bank implements bank.Bank {
+	@SuppressWarnings("serial")
+	static class Bank extends UnicastRemoteObject implements RemoteBank {
 
 		private final Map<String, Account> accounts = new ConcurrentHashMap<String, Account>();
-		private final List<UpdateHandler> updateHandlers;
+		private final List<RemoteUpdateHandler> updateHandlers = new ArrayList<RemoteUpdateHandler>();
 		
-		public Bank(List<UpdateHandler> updateHandlers) {
-			this.updateHandlers = updateHandlers;
+		public Bank() throws RemoteException {
 		}
 
+		@Override
+		public void registerUpdateHandler(RemoteUpdateHandler handler) throws IOException {
+			updateHandlers.add(handler);
+		}
+		
 		@Override
 		public Set<String> getAccountNumbers() {
 			Set<String> activeNumbers = new HashSet<String>();
@@ -128,14 +127,15 @@ public class Driver implements bank.BankDriver2 {
 		}
 	}
 
-	static class Account implements bank.Account {
+	@SuppressWarnings("serial")
+	static class Account extends UnicastRemoteObject implements RemoteAccount {
 		private final String number;
 		private final String owner;
 		private volatile double balance;
 		private volatile boolean active = true;
-		private final List<UpdateHandler> updateHandlers;
+		private final List<RemoteUpdateHandler> updateHandlers;
 
-		Account(String owner, List<UpdateHandler> updateHandlers) throws IOException {
+		Account(String owner, List<RemoteUpdateHandler> updateHandlers) throws IOException {
 			this.owner = owner;
 			this.number = UUID.randomUUID().toString();
 			this.updateHandlers = updateHandlers;
@@ -203,7 +203,4 @@ public class Driver implements bank.BankDriver2 {
 		}
 
 	}
-
-
-
 }
